@@ -3,7 +3,7 @@
 GIT_ROOT="$BATS_TEST_DIRNAME/../../../"
 MIGRATION_ROOT="$GIT_ROOT/staging/ledger_migrations.json"
 MAKEFILE="Makefile.ledger"
-MFX_ADDRESS=mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz
+MFX_ADDRESS=mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l
 
 load '../../test_helper/load'
 load '../../test_helper/ledger'
@@ -32,11 +32,21 @@ function setup() {
         }' \
         "$MIGRATION_ROOT" > "$BATS_TEST_ROOTDIR/migrations.json"
 
+    cp "$GIT_ROOT/staging/ledger_state.json5" "$BATS_TEST_ROOTDIR/ledger_state.json5"
+
+    # Use production MFX address
+    sed -i.bak 's/mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz/mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l/g' "$BATS_TEST_ROOTDIR/ledger_state.json5"
+
+    # Skip hash check
+    sed -i.bak 's/hash/\/\/hash/' "$BATS_TEST_ROOTDIR/ledger_state.json5"
+
     (
       cd "$GIT_ROOT/docker/" || exit
       make -f $MAKEFILE clean
       make -f $MAKEFILE start-nodes-detached \
           ID_WITH_BALANCES="$(identity 1):1000000" \
+          STATE="$BATS_TEST_ROOTDIR/ledger_state.json5" \
+          TOKEN="$MFX_ADDRESS" \
           MIGRATIONS="$BATS_TEST_ROOTDIR/migrations.json" || {
         echo '# Could not start nodes...' >&3
         exit 1
@@ -73,18 +83,35 @@ function teardown() {
     check_consistency --pem=2 --balance=123 8000 8001 8002 8003
     check_consistency --pem=3 --balance=456 8000 8001 8002 8003
 
+    # Create a new token
+    create_token --pem=1 --port=8000
+    call_ledger --pem=1 --port=8000 token update --name "\"ZZZ name\"" \
+        --ticker "ZZZ" \
+        --decimals "6" \
+        --memo "\"Update memo\"" \
+        --owner "$(identity 2)" \
+        "${SYMBOL}"
+
     # Disable Token Minting
     wait_for_block 35
 
-    # Token endpoints should be disabled
+    # MFX minting should still work
     call_ledger --pem=1 --port=8000 token mint MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
-    assert_output --partial "Token minting is disabled on this network"
+    refute_output --partial "Token minting is disabled on this network"
     check_consistency --pem=1 --balance=1000000 --id="$(identity 1)" 8000 8001 8002 8003
-    check_consistency --pem=2 --balance=123 8000 8001 8002 8003
-    check_consistency --pem=3 --balance=456 8000 8001 8002 8003
+    check_consistency --pem=2 --balance=246 8000 8001 8002 8003
+    check_consistency --pem=3 --balance=912 8000 8001 8002 8003
 
     # Token burn should still work
-    call_ledger --pem=1 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\''' --error-on-under-burn
+    call_ledger --pem=1 --port=8000 token burn MFX ''\''{"'$(identity 2)'": 246, "'$(identity 3)'": 912}'\''' --error-on-under-burn
     check_consistency --pem=2 --balance=0 8000 8001 8002 8003
     check_consistency --pem=3 --balance=0 8000 8001 8002 8003
+
+    # ZZZ minting should fail
+    call_ledger --pem=1 --port=8000 token mint ZZZ ''\''{"'$(identity 2)'": 123, "'$(identity 3)'": 456}'\'''
+    assert_output --partial "Token minting is disabled on this network"
+
+    call_ledger --port=8000 token info "${SYMBOL}"
+    assert_output --regexp "total:.*(.*0,.*)"
+    assert_output --regexp "circulating:.*(.*0,.*)"
 }

@@ -55,7 +55,7 @@ local abci(i, user, allow_addrs, abci_migrations) = {
     depends_on: [ "ledger-" + i ],
 };
 
-local ledger(i, user, id_with_balances, enable_migrations) = {
+local ledger(i, user, id_with_balances, token, enable_migrations) = {
     image: "bazel/src/many-ledger:many-ledger-image",
     user: "" + user,
     volumes: [
@@ -70,7 +70,7 @@ local ledger(i, user, id_with_balances, enable_migrations) = {
         "--persistent=/persistent/ledger.db",
         "--addr=0.0.0.0:8000",
     ] + load_migrations(enable_migrations)
-      + generate_balance_flags(id_with_balances)
+      + generate_balance_flags(id_with_balances, token)
 };
 
 local tendermint(i, user) = {
@@ -87,12 +87,12 @@ local tendermint(i, user) = {
     ports: [ "" + (26600 + i) + ":26657" ],
 };
 
-function(nb_nodes=4, user=1000, id_with_balances="", allow_addrs=false, enable_migrations=false, abci_migrations=false) {
+function(nb_nodes=4, user=1000, id_with_balances="", token="mqbfbahksdwaqeenayy2gxke32hgb7aq4ao4wt745lsfs6wiaaaaqnz", allow_addrs=false, enable_migrations=false, abci_migrations=false) {
     version: '3',
     services: {
         ["abci-" + i]: abci(i, user, allow_addrs, abci_migrations) for i in std.range(0, nb_nodes - 1)
     } + {
-        ["ledger-" + i]: ledger(i, user, id_with_balances, enable_migrations) for i in std.range(0, nb_nodes - 1)
+        ["ledger-" + i]: ledger(i, user, id_with_balances, token, enable_migrations) for i in std.range(0, nb_nodes - 1)
     } + {
         ["tendermint-" + i]: tendermint(i, user) for i in std.range(0, nb_nodes - 1)
     },

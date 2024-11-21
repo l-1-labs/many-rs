@@ -11,7 +11,7 @@ orbs:
 executors:
   linux2204:
     docker:
-      - image: cimg/rust:1.67
+      - image: cimg/rust:1.81
     resource_class: xlarge # 8 cores, 16Gb
   linux2204_machine:
     machine:
@@ -48,7 +48,11 @@ jobs:
           steps:
             - run:
                 name: install cbor-diag
-                command: cargo install --force cbor-diag-cli
+                command: |
+                  wget https://github.com/liftedinit/cbor-diag-rs/releases/download/cbor-diag-cli-0.1.8-ll.1/cbor-diag
+                  chmod +x cbor-diag
+                  sudo mv cbor-diag /usr/local/bin/cbor-diag
+                  cbor-diag --version
             - run:
                 name: rustfmt, clippy, build and tests and doc tests (linux)
                 command: |

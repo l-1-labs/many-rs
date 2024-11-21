@@ -44,6 +44,7 @@ genfiles-ledger/docker-compose.json: genfiles-common/jsonnet-docker docker-compo
 		/volume/copy-docker-compose-ledger.jsonnet \
 		--tla-code nb_nodes=$(NB_NODES) \
 		--tla-code user=$$(id -u) \
+		--tla-code token=\"$(TOKEN)\" \
 		--tla-code id_with_balances=\"$(ID_WITH_BALANCES)\" \
 		--tla-code enable_migrations=$(ENABLE_MIGRATIONS) \
 		--tla-code abci_migrations=$(ENABLE_ABCI_MIGRATIONS) \

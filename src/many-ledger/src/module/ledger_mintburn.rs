@@ -9,7 +9,14 @@ use many_modules::events::EventInfo;
 use many_modules::ledger;
 use many_modules::ledger::{TokenBurnArgs, TokenBurnReturns, TokenMintArgs, TokenMintReturns};
 use many_types::ledger::Symbol;
+use once_cell::sync::Lazy;
 use std::collections::BTreeSet;
+use std::str::FromStr;
+
+// Production network MFX address
+pub static MFX: Lazy<Address> = Lazy::new(|| {
+    Address::from_str("mqbh742x4s356ddaryrxaowt4wxtlocekzpufodvowrirfrqaaaaa3l").unwrap()
+});
 
 /// Check if a symbol exists in the storage
 fn check_symbol_exists(symbol: &Symbol, symbols: BTreeSet<Symbol>) -> Result<(), ManyError> {
@@ -30,21 +37,22 @@ impl ledger::LedgerMintBurnModuleBackend for LedgerModuleImpl {
             return Err(ManyError::invalid_method_name("tokens.mint"));
         }
 
-        if self
-            .storage
-            .migrations()
-            .is_active(&DISABLE_TOKEN_MINT_MIGRATION)
-        {
-            return Err(ManyError::unknown(
-                "Token minting is disabled on this network",
-            ));
-        }
-
         let TokenMintArgs {
             symbol,
             distribution,
             memo,
         } = args;
+
+        if symbol != *MFX
+            && self
+                .storage
+                .migrations()
+                .is_active(&DISABLE_TOKEN_MINT_MIGRATION)
+        {
+            return Err(ManyError::unknown(
+                "Token minting is disabled on this network",
+            ));
+        }
 
         self.verify_mint_burn_identity(sender, &symbol)?;
 

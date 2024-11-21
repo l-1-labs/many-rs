@@ -1,5 +1,5 @@
 {
-  "checksum": "2c2c0c43c761a46e0a0663ae8f918b710f8933b2c1dfe8904026181106228cb6",
+  "checksum": "8e608299ab3beef4115906f61ad02c79b63133baa41a1a2630c68c562a5bdaee",
   "crates": {
     "addr2line 0.21.0": {
       "name": "addr2line",
@@ -15236,6 +15236,10 @@
               "target": "num_traits"
             },
             {
+              "id": "once_cell 1.18.0",
+              "target": "once_cell"
+            },
+            {
               "id": "rand 0.8.5",
               "target": "rand"
             },
@@ -15279,10 +15283,6 @@
             {
               "id": "cucumber 0.20.0",
               "target": "cucumber"
-            },
-            {
-              "id": "once_cell 1.18.0",
-              "target": "once_cell"
             },
             {
               "id": "proptest 1.2.0",
